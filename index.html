@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>四大校园活动 · 一页尽览</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --blue-deep:#1c4fa0;
+    --blue:#2f7ed8;
+    --ink:#17325c;
+    --grey:#6b7f9a;
+    --dur:820ms;
+    --ease:cubic-bezier(.58,.04,.26,1);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+    background:
+      radial-gradient(circle at 16% 10%, #f4f9ff 0%, rgba(244,249,255,0) 55%),
+      radial-gradient(circle at 86% 92%, #e9f4ea 0%, rgba(233,244,234,0) 52%),
+      linear-gradient(168deg,#eff7ff 0%,#e3eefb 45%,#eaf3f7 100%);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;color:var(--ink);
+  }
+
+  .stage{position:relative;display:flex;align-items:center;justify-content:center;}
+
+  .book{
+    position:relative;
+    perspective:2600px;
+    perspective-origin:50% 50%;
+  }
+  /* 整叠书页的厚度与落地阴影 */
+  .book::before{
+    content:"";
+    position:absolute;left:7px;right:1px;top:9px;bottom:-9px;
+    border-radius:18px;
+    background:linear-gradient(180deg,#c4d7ec,#a9c1dd 60%,#9db6d4);
+    box-shadow:0 34px 60px -18px rgba(18,55,110,.45), 0 8px 18px rgba(18,55,110,.16);
+    z-index:0;
+  }
+
+  .leaf{
+    position:absolute;inset:0;
+    transform-origin:left center;
+    transform-style:preserve-3d;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    transition:transform var(--dur) var(--ease);
+    will-change:transform;
+  }
+
+  .face{
+    position:absolute;inset:0;
+    overflow:hidden;
+    border-radius:18px;
+    background:#fff;
+    -webkit-backface-visibility:hidden;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.55);
+  }
+  .face > img{
+    width:100%;height:100%;
+    object-fit:cover;object-position:top center;
+    display:block;user-select:none;-webkit-user-drag:none;pointer-events:none;
+  }
+
+  /* 翻页时的明暗渐变 */
+  .face .shade{
+    position:absolute;inset:0;border-radius:18px;pointer-events:none;z-index:6;
+    background:linear-gradient(90deg,rgba(10,36,74,.50) 0%,rgba(10,36,74,.14) 40%,rgba(10,36,74,0) 80%);
+    opacity:0;transition:opacity var(--dur) var(--ease);
+  }
+  .leaf.turning .shade{opacity:1;}
+
+  /* ============ 封面卡片热区 ============ */
+  .hotspots{position:absolute;inset:0;z-index:8;}
+  .hotspot{
+    position:absolute;padding:0;border:0;background:transparent;
+    border-radius:var(--cardR,14px);
+    cursor:pointer;
+    transition:transform .32s cubic-bezier(.34,1.35,.5,1), box-shadow .32s, background .32s;
+  }
+  .hotspot::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;
+    border:2px solid transparent;transition:border-color .32s, box-shadow .32s;
+  }
+  .hotspot::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;
+    background:radial-gradient(circle at 50% 120%, rgba(120,190,255,.30), rgba(120,190,255,0) 70%);
+    opacity:0;transition:opacity .32s;
+  }
+  .hotspot:hover,.hotspot:focus-visible{
+    transform:translateY(-5px) scale(1.02);
+    background:rgba(255,255,255,.30);
+    box-shadow:0 18px 34px -10px rgba(28,79,160,.5);
+    outline:none;
+  }
+  .hotspot:hover::before,.hotspot:focus-visible::before{
+    border-color:rgba(47,126,216,.9);
+    box-shadow:0 0 0 6px rgba(47,126,216,.15) inset;
+  }
+  .hotspot:hover::after,.hotspot:focus-visible::after{opacity:1;}
+  .hotspot[data-locked="true"]{cursor:not-allowed;}
+  .hotspot[data-locked="true"]:hover{
+    transform:none;background:rgba(255,255,255,.20);box-shadow:none;
+  }
+  .hotspot[data-locked="true"]:hover::before{
+    border-color:rgba(150,168,190,.75);box-shadow:none;
+  }
+  .hotspot[data-locked="true"]:hover::after{opacity:0;}
+
+  /* 待补充标记 */
+  .pending{
+    position:absolute;right:6%;top:8%;z-index:9;pointer-events:none;
+    font-size:11px;letter-spacing:.5px;color:#8fa6bf;
+    background:rgba(255,255,255,.85);border:1px solid #cfe0f0;
+    padding:2px 8px;border-radius:999px;
+    opacity:0;transition:opacity .3s;
+  }
+  .hotspot[data-locked="true"]:hover ~ .pending{opacity:1;}
+
+  /* ============ 上升气泡 ============ */
+  .bubbles{position:absolute;inset:0;z-index:12;pointer-events:none;overflow:hidden;border-radius:18px;}
+  .bubble{
+    position:absolute;left:0;top:0;
+    width:var(--s);height:var(--s);border-radius:50%;
+    background:radial-gradient(circle at 32% 28%,
+      rgba(255,255,255,.96) 0%,
+      rgba(255,255,255,.48) 36%,
+      rgba(168,214,255,.42) 66%,
+      rgba(120,185,245,.10) 100%);
+    box-shadow:inset 0 0 5px rgba(255,255,255,.9), 0 0 9px rgba(140,200,255,.6);
+    animation:floatUp var(--d) linear infinite;
+    animation-delay:var(--dl);
+    opacity:0;
+  }
+  .bubble::after{
+    content:"";position:absolute;width:28%;height:28%;border-radius:50%;
+    top:19%;left:23%;background:rgba(255,255,255,.98);
+  }
+  @keyframes floatUp{
+    0%   {opacity:0;   transform:translate3d(0,18px,0) scale(.42);}
+    14%  {opacity:.95;}
+    50%  {             transform:translate3d(calc(var(--dx) * .55),-56px,0) scale(1);}
+    84%  {opacity:.5;}
+    100% {opacity:0;   transform:translate3d(var(--dx),-126px,0) scale(.66);}
+  }
+  .bubble.mini{animation-name:floatUpMini;}
+  @keyframes floatUpMini{
+    0%   {opacity:0;  transform:translate3d(0,12px,0) scale(.32);}
+    20%  {opacity:.8;}
+    100% {opacity:0;  transform:translate3d(var(--dx),-90px,0) scale(.5);}
+  }
+
+  /* ============ 控件 ============ */
+  .nav{
+    position:absolute;top:50%;transform:translateY(-50%);
+    width:50px;height:50px;border-radius:50%;border:0;cursor:pointer;
+    background:rgba(255,255,255,.94);color:var(--blue-deep);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 10px 26px -8px rgba(20,60,120,.42);
+    transition:transform .22s,opacity .22s;z-index:40;
+  }
+  .nav:hover{transform:translateY(-50%) scale(1.1);}
+  .nav:active{transform:translateY(-50%) scale(.94);}
+  .nav svg{width:22px;height:22px;}
+  .nav.prev{left:8px;}
+  .nav.next{right:8px;}
+  .nav[disabled]{opacity:.25;cursor:default;transform:translateY(-50%);}
+
+  .hud{
+    position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:13px;
+    padding:8px 16px;border-radius:999px;
+    background:rgba(255,255,255,.88);backdrop-filter:blur(10px);
+    box-shadow:0 10px 26px -12px rgba(20,60,120,.4);
+    z-index:40;font-size:13px;color:var(--grey);white-space:nowrap;
+  }
+  .hud .cnt{font-weight:600;color:var(--blue-deep);font-variant-numeric:tabular-nums;}
+  .hud .cnt b{font-size:16px;}
+  .dots{display:flex;gap:7px;}
+  .dots button{
+    width:7px;height:7px;padding:0;border:0;border-radius:50%;
+    background:#c3d5ea;cursor:pointer;transition:all .3s;
+  }
+  .dots button:hover{background:#9dbde0;}
+  .dots button.on{background:var(--blue);width:20px;border-radius:4px;}
+  .hud .t{max-width:220px;overflow:hidden;text-overflow:ellipsis;}
+
+  .toast{
+    position:absolute;left:50%;bottom:82px;transform:translate(-50%,14px);
+    padding:11px 20px;border-radius:12px;
+    background:rgba(23,50,92,.94);color:#fff;font-size:13.5px;line-height:1.5;
+    box-shadow:0 14px 34px -10px rgba(10,35,75,.6);
+    opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;
+    z-index:50;max-width:90%;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  @media (max-width:640px){
+    .nav{width:40px;height:40px;}
+    .nav.prev{left:-4px;} .nav.next{right:-4px;}
+    .hud{bottom:12px;padding:7px 13px;font-size:12px;gap:9px;}
+    .hud .t{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="book" id="book" aria-label="四大校园活动翻页相册"></div>
+
+  <button class="nav prev" id="prev" aria-label="上一页">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <button class="nav next" id="next" aria-label="下一页">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+
+  <div class="hud">
+    <span class="cnt"><b id="cur">1</b> / <span id="tot">5</span></span>
+    <span class="dots" id="dots"></span>
+    <span class="t" id="title">四大校园活动 · 一页尽览</span>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* 封面原始尺寸，所有归一化坐标都基于它 */
+const CW = 1184, CH = 1780;
+
+/* 页面顺序 = 四张海报的原始顺序；索引 0 为封面 */
+const PAGES = [
+  { src:'images/cover.jpg',          label:'四大校园活动 · 一页尽览' },
+  { src:'images/slide-lecture.jpg',  label:'校友微讲堂' },
+  { src:'images/slide-tree.jpg',     label:'校园树木认捐' },
+  { src:'images/slide-photo-a.jpg',  label:'校园照片征集' },
+  { src:'images/slide-photo-b.jpg',  label:'校园照片征集 · 定格轻工' }
+];
+
+/* 封面四张卡片的实测像素边界（2×2 网格）
+   左列 x 72–583 / 右列 x 603–1125；上排 y 654–889 / 下排 y 909–1141
+   target 为 PAGES 下标；null 表示该活动暂时没有对应海报 */
+const REGIONS = [
+  { name:'校园招聘会',   x0:72,  y0:654, x1:583,  y1:889,  target:null },
+  { name:'校园照片征集', x0:603, y0:654, x1:1125, y1:889,  target:3 },
+  { name:'校园树木认捐', x0:72,  y0:909, x1:583,  y1:1141, target:2 },
+  { name:'校友微讲堂',   x0:603, y0:909, x1:1125, y1:1141, target:1 }
+];
+
+const book    = document.getElementById('book');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+const dotsEl  = document.getElementById('dots');
+const curEl   = document.getElementById('cur');
+const totEl   = document.getElementById('tot');
+const titleEl = document.getElementById('title');
+const toastEl = document.getElementById('toast');
+
+const N = PAGES.length;
+let current = 0, busy = false;
+
+/* ---------------- 构建页面 ---------------- */
+PAGES.forEach((p, i) => {
+  const leaf = document.createElement('div');
+  leaf.className = 'leaf';
+
+  const face = document.createElement('div');
+  face.className = 'face';
+
+  const img = document.createElement('img');
+  img.src = p.src; img.alt = p.label; img.draggable = false;
+  face.appendChild(img);
+
+  if (i === 0) {
+    /* 卡片热区 */
+    const hs = document.createElement('div');
+    hs.className = 'hotspots';
+    REGIONS.forEach(r => {
+      const b = document.createElement('button');
+      b.className = 'hotspot';
+      b.style.left   = (r.x0 / CW * 100) + '%';
+      b.style.top    = (r.y0 / CH * 100) + '%';
+      b.style.width  = ((r.x1 - r.x0) / CW * 100) + '%';
+      b.style.height = ((r.y1 - r.y0) / CH * 100) + '%';
+      b.dataset.locked = r.target === null ? 'true' : 'false';
+      b.setAttribute('aria-label',
+        r.name + (r.target === null ? '（海报待补充）' : '，点击直达'));
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        if (r.target === null) showToast('「' + r.name + '」的海报还没有上传，补齐后点这里就能直接跳过去');
+        else goTo(r.target);
+      });
+      hs.appendChild(b);
+    });
+    face.appendChild(hs);
+
+    /* 上升气泡：从四张卡片上袅袅升起 */
+    const bb = document.createElement('div');
+    bb.className = 'bubbles';
+    for (let k = 0; k < 44; k++) {
+      const a  = REGIONS[k % REGIONS.length];
+      const mini = Math.random() < 0.55;
+      const el = document.createElement('span');
+      el.className = 'bubble' + (mini ? ' mini' : '');
+      const cx = (a.x0 + a.x1) / 2 / CW;
+      const cy = (a.y0 + a.y1) / 2 / CH;
+      const spx = (a.x1 - a.x0) / CW * 0.44;
+      const spy = (a.y1 - a.y0) / CH * 0.30;
+      el.style.left = ((cx + (Math.random() - .5) * spx) * 100).toFixed(2) + '%';
+      el.style.top  = ((cy + (Math.random() - .5) * spy + 0.025) * 100).toFixed(2) + '%';
+      el.style.setProperty('--s',  (mini ? 3 + Math.random()*4 : 5 + Math.random()*8).toFixed(1) + 'px');
+      el.style.setProperty('--dx', ((Math.random() - .5) * 52).toFixed(1) + 'px');
+      el.style.setProperty('--d',  (mini ? 5.5 + Math.random()*4 : 7.5 + Math.random()*5).toFixed(2) + 's');
+      el.style.setProperty('--dl', (Math.random() * 9).toFixed(2) + 's');
+      bb.appendChild(el);
+    }
+    face.appendChild(bb);
+  }
+
+  const shade = document.createElement('div');
+  shade.className = 'shade';
+  face.appendChild(shade);
+
+  leaf.appendChild(face);
+  book.appendChild(leaf);
+});
+
+const leaves = Array.from(book.querySelectorAll('.leaf'));
+
+/* ---------------- 尺寸 ---------------- */
+function layout(){
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const wide = vw > 640;
+  let h = Math.min(vh * (wide ? 0.86 : 0.80), 900);
+  let w = h * CW / CH;
+  const maxW = vw - (wide ? 156 : 34);
+  if (w > maxW) { w = maxW; h = w * CH / CW; }
+  book.style.width  = w + 'px';
+  book.style.height = h + 'px';
+  book.style.setProperty('--cardR', Math.max(6, w * 0.011) + 'px');
+  stack();
+}
+
+function stack(){
+  leaves.forEach((leaf, i) => {
+    const flipped = i < current;
+    leaf.style.transform = flipped ? 'rotateY(-180deg)' : 'rotateY(0deg)';
+    leaf.style.zIndex = flipped ? (i + 1) : (N - i);
+  });
+}
+
+/* ---------------- 翻页 ---------------- */
+function goTo(target){
+  if (busy) return;
+  target = Math.max(0, Math.min(N - 1, target));
+  if (target === current) return;
+
+  busy = true;
+  const forward = target > current;
+  const step = forward ? 1 : -1;
+
+  (function stepOnce(){
+    if (forward ? current >= target : current <= target) {
+      current = target; busy = false; stack(); updateHud(); return;
+    }
+    const idx  = forward ? current : current - 1;
+    const leaf = leaves[idx];
+    leaf.style.zIndex = N * 3;
+    leaf.classList.add('turning');
+
+    current += step;
+    void leaf.offsetWidth;
+    leaf.style.transform = forward ? 'rotateY(-180deg)' : 'rotateY(0deg)';
+    updateHud();
+
+    setTimeout(() => {
+      leaf.classList.remove('turning');
+      stack();
+      setTimeout(stepOnce, 70);
+    }, 830);
+  })();
+}
+
+const nextPage = () => goTo(current + 1);
+const prevPage = () => goTo(current - 1);
+
+/* ---------------- HUD ---------------- */
+totEl.textContent = N;
+PAGES.forEach((p, i) => {
+  const d = document.createElement('button');
+  d.setAttribute('aria-label', '第' + (i + 1) + '页 · ' + p.label);
+  d.addEventListener('click', () => goTo(i));
+  dotsEl.appendChild(d);
+});
+function updateHud(){
+  curEl.textContent = current + 1;
+  Array.from(dotsEl.children).forEach((d, i) => d.classList.toggle('on', i === current));
+  titleEl.textContent = PAGES[current].label;
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === N - 1;
+}
+
+let toastTimer;
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+
+/* ---------------- 交互 ---------------- */
+prevBtn.addEventListener('click', e => { e.stopPropagation(); prevPage(); });
+nextBtn.addEventListener('click', e => { e.stopPropagation(); nextPage(); });
+
+book.addEventListener('click', e => {
+  if (e.target.closest('.hotspot')) return;
+  nextPage();
+});
+
+let downX = null, downT = 0;
+book.addEventListener('pointerdown', e => { downX = e.clientX; downT = Date.now(); });
+book.addEventListener('pointerup', e => {
+  if (downX === null) return;
+  const dx = e.clientX - downX, dt = Date.now() - downT;
+  downX = null;
+  if (Math.abs(dx) > 45 && dt < 620) { dx < 0 ? nextPage() : prevPage(); }
+});
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'PageDown'){ e.preventDefault(); nextPage(); }
+  if (e.key === 'ArrowLeft'  || e.key === 'PageUp'){   e.preventDefault(); prevPage(); }
+  if (e.key === 'Home') goTo(0);
+  if (e.key === 'End')  goTo(N - 1);
+});
+
+window.addEventListener('pointermove', e => {
+  if (window.innerWidth < 800 || busy) return;
+  const r = book.getBoundingClientRect();
+  const cx = (e.clientX - (r.left + r.width / 2)) / r.width;
+  const cy = (e.clientY - (r.top + r.height / 2)) / r.height;
+  book.style.transform = 'rotateY(' + (cx * 4).toFixed(2) + 'deg) rotateX(' + (-cy * 3).toFixed(2) + 'deg)';
+});
+document.getElementById('stage').addEventListener('pointerleave', () => { book.style.transform = ''; });
+
+window.addEventListener('resize', layout);
+layout();
+updateHud();
+</script>
+</body>
+</html>
